@@ -1,0 +1,5 @@
+#ifndef _SND_AncestralGuardianMissileLaunch_H
+#define _SND_AncestralGuardianMissileLaunch_H
+extern const unsigned char AncestralGuardianMissileLaunch[11180];
+#define AncestralGuardianMissileLaunch_size 11180u
+#endif

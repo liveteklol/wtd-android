@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="fr.noda.wtd.port"
+    android:versionCode="5"
+    android:versionName="0.5-android">
+
+    <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="30" />
+
+    <application android:label="Warcraft TD (WTD port)"
+                 android:hasCode="false"
+                 android:allowBackup="true">
+        <activity android:name="android.app.NativeActivity"
+                  android:label="Warcraft TD"
+                  android:screenOrientation="portrait"
+                  android:configChanges="orientation|keyboardHidden|screenSize"
+                  android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
+                  android:exported="true">
+            <meta-data android:name="android.app.lib_name" android:value="wtd" />
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>
