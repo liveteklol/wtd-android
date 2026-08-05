@@ -568,7 +568,8 @@ static inline u8 large_pix(const bglayer *l, s32 x, s32 y)
     return l->tiles[tile * 64 + ty * 8 + tx];
 }
 
-static void draw_bg_line(screen_t *sc, const bglayer *l, u32 *line, int y, int vw)
+static void draw_bg_line(screen_t *sc, int screen, const bglayer *l, u32 *line,
+                         int y, int vw)
 {
     int x;
     switch (l->type) {
@@ -586,9 +587,14 @@ static void draw_bg_line(screen_t *sc, const bglayer *l, u32 *line, int y, int v
         break;
     case 3: {
         /* the 8-bit bitmap layer is a fixed 256x192 surface; while a
-           modal dialog is open over the extended view it is centred */
-        int ox, oy;
-        shim_GetDialogOffset(&ox, &oy);
+           modal dialog is open over the extended view it is centred.
+           Only engine 0 carries the extended map view: engine 1 (the top
+           screen) is always a native 256x192 surface, so centring its
+           interface text by the map viewport's offset would push it off
+           position for the whole time a dialog is open. */
+        int ox = 0, oy = 0;
+        if ((screen & 1) == 0)
+            shim_GetDialogOffset(&ox, &oy);
         int by = y - oy;
         if (by < 0 || by >= 192) break;
         const u8 *row = (const u8 *)sc->draw + (by << 8);
@@ -695,7 +701,7 @@ void shim_ComposeScreen(int screen, u32 *out)
             bglayer *l = &sc->bg[b];
             if (l->type && l->prio == prio)
                 for (y = 0; y < vh; y++)
-                    draw_bg_line(sc, l, out + y * vw, y, vw);
+                    draw_bg_line(sc, screen & 1, l, out + y * vw, y, vw);
         }
         for (i = PA_NMAXSPRITES - 1; i >= 0; i--) {
             oamobj *o = &sc->obj[i];
