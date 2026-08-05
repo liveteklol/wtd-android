@@ -75,10 +75,10 @@ void title() {
     initSnowFlakes();
     initFlashEyes();
     fadeInTop();
-    
-    if(first_launch)
-        wait(1000);
-            
+
+    // [Android port] the DS held the title screen a full second here to let
+    // the intro sound play off slow flashcard I/O; nothing to wait for now.
+
 //    waitNFlakes(200);
 
 //    while(PA_SoundChannelIsBusy(0))
@@ -105,10 +105,8 @@ int main(int argc, char ** argv)
     // Variables
     u8 select;
 
-    // Waits some VBL to fix some compatibility issues with some flashcards
-    PA_WaitForVBL();
-    PA_WaitForVBL();
-    PA_WaitForVBL();
+    // [Android port] the DS waited some VBL here for flashcard compatibility;
+    // there is no flashcard to settle on Android.
 
     PA_InitASLibForMP3(AS_MODE_MP3 | AS_MODE_16CH);
     AS_SetDefaultSettings(AS_ADPCM, 22050, AS_NO_DELAY);

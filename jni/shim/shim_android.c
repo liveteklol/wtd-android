@@ -445,13 +445,24 @@ static void audio_init(void)
 /* Asset extraction                                                     */
 /* ------------------------------------------------------------------ */
 
+/* mode 0: never overwrite an existing file (user data: settings, saves)
+   mode 1: refresh only when the size differs (maps: follow APK upgrades
+           without paying the copy on every single launch)                */
 static void copy_asset(AAssetManager *am, const char *src, const char *dst,
                        int overwrite)
 {
     struct stat st;
-    if (!overwrite && stat(dst, &st) == 0) return;
+    int exists = (stat(dst, &st) == 0);
+    if (exists && !overwrite) return;
+
     AAsset *a = AAssetManager_open(am, src, AASSET_MODE_STREAMING);
     if (!a) { LOGE("asset missing: %s", src); return; }
+
+    if (exists && st.st_size == AAsset_getLength(a)) {
+        AAsset_close(a);
+        return;
+    }
+
     FILE *f = fopen(dst, "wb");
     if (f) {
         char buf[16384];

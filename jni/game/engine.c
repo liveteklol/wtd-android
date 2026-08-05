@@ -3162,32 +3162,35 @@ void manageBuildMenu() {
 
     bool go_up, go_down;
 
+    // [Android port] a shrinking viewport can leave a bottom-anchored menu
+    // parked below the new VIEW_H; re-clamp so it settles at the right edge
+    if(build_menu_pos > 1 && menu_y > VIEW_H)
+        menu_y = VIEW_H;
+
     if(build_menu_pos > 1) {
-        go_up = menu && (menu_y > 176);
-        go_down = !menu && (menu_y < 192) && menutimer == 0;
+        go_up = menu && (menu_y > VIEW_H - 16);
+        go_down = !menu && (menu_y < VIEW_H) && menutimer == 0;
     } else {
         go_up = !menu && (menu_y > -32) && menutimer == 0;
         go_down = menu && (menu_y < 0);
     }
 
-    if(go_down) {
+    if(go_down)
         menu_y += 2;
-        if(build_menu_pos%2 == 0) {
-            PA_SetSpriteXY(0, BUILD_MENU_ID, menu_x, menu_y);
-            PA_SetSpriteXY(0, BUILD_MENU_ID+1, menu_x+64, menu_y);
-        } else {
-            PA_SetSpriteXY(0, BUILD_MENU_ID, menu_x+64, menu_y);
-            PA_SetSpriteXY(0, BUILD_MENU_ID+1, menu_x, menu_y);
-        }
-    } else if(go_up) {
+    else if(go_up)
         menu_y -= 2;
-        if(build_menu_pos%2 == 0) {
-            PA_SetSpriteXY(0, BUILD_MENU_ID, menu_x, menu_y);
-            PA_SetSpriteXY(0, BUILD_MENU_ID+1, menu_x+64, menu_y);
-        } else {
-            PA_SetSpriteXY(0, BUILD_MENU_ID, menu_x+64, menu_y);
-            PA_SetSpriteXY(0, BUILD_MENU_ID+1, menu_x, menu_y);
-        }
+
+    // [Android port] menu_x/menu_y follow VIEW_W/VIEW_H, which change every
+    // frame with pinch zoom.  Re-apply the sprite positions unconditionally,
+    // not only while sliding: otherwise a zoom performed while the menu is at
+    // rest leaves the sprites at their old X, off the viewport, and the
+    // Build/Cancel buttons vanish until the next open/close animation.
+    if(build_menu_pos%2 == 0) {
+        PA_SetSpriteXY(0, BUILD_MENU_ID, menu_x, menu_y);
+        PA_SetSpriteXY(0, BUILD_MENU_ID+1, menu_x+64, menu_y);
+    } else {
+        PA_SetSpriteXY(0, BUILD_MENU_ID, menu_x+64, menu_y);
+        PA_SetSpriteXY(0, BUILD_MENU_ID+1, menu_x, menu_y);
     }
         
     if(menutimer > 0) {

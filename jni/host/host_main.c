@@ -6,6 +6,7 @@
  * Script line format (one action per line):
  *   <frame> touch <x> <y> <holdframes>
  *   <frame> pad <name> <holdframes>      (a b x y l r start select up down left right)
+ *   <frame> view <w> <h>                 (mid-run viewport change, i.e. pinch zoom)
  *   <frame> dump <label>
  *   <frame> exit
  */
@@ -48,6 +49,10 @@ static void load_script(void)
             for (x = 0; x < 12; x++)
                 if (!strcmp(cmd, padnames[x])) a->x = x;
             nacts++;
+        } else if (sscanf(line, "%u view %d %d", &a->frame, &x, &y) == 3) {
+            a->type = 5; a->x = x; a->y = y; nacts++;
+        } else if (sscanf(line, "%u probe %63s", &a->frame, arg) == 2) {
+            a->type = 6; snprintf(a->label, sizeof(a->label), "%s", arg); nacts++;
         } else if (sscanf(line, "%u dump %63s", &a->frame, arg) == 2) {
             a->type = 3; snprintf(a->label, sizeof(a->label), "%s", arg); nacts++;
         } else if (sscanf(line, "%u %31s", &a->frame, cmd) == 2 && !strcmp(cmd, "exit")) {
@@ -96,6 +101,22 @@ void platform_vblank(void)
                 pad_until = frame_no + acts[i].hold; break;
         case 3: dump_screens(acts[i].label); break;
         case 4: fprintf(stderr, "[frame %u] script exit\n", frame_no); exit(0);
+        case 5: shim_SetWantedViewSize(acts[i].x, acts[i].y);
+                fprintf(stderr, "[frame %u] view -> %dx%d (now %dx%d)\n",
+                        frame_no, acts[i].x, acts[i].y,
+                        shim_view_w, shim_view_h);
+                break;
+        case 6: {   /* build-menu sprite visibility probe (BUILD_MENU_ID=124) */
+                int bx = PA_GetSpriteX(0, 124), by = PA_GetSpriteY(0, 124);
+                int cx = PA_GetSpriteX(0, 125), cy = PA_GetSpriteY(0, 125);
+                int okb = bx > -64 && bx < shim_view_w && by > -32 && by < shim_view_h;
+                int okc = cx > -64 && cx < shim_view_w && cy > -32 && cy < shim_view_h;
+                fprintf(stderr,
+                    "[frame %u] PROBE %s view=%dx%d menu=(%d,%d)%s cancel=(%d,%d)%s\n",
+                    frame_no, acts[i].label, shim_view_w, shim_view_h,
+                    bx, by, okb ? "" : " <-- OFFSCREEN",
+                    cx, cy, okc ? "" : " <-- OFFSCREEN");
+                break; }
         }
     }
 

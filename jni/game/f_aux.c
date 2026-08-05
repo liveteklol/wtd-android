@@ -29,13 +29,16 @@ static u8 voice_snds;       // voices deaths sounds counter
 static u8 queue_size;       // size of the sound queue
 static sfx snd_queue[SND_QUEUE_SIZE];   // the sound queue
 */
+/* [Android port] The DS ran these fades at 2 VBL per brightness step (30 Hz)
+   partly to mask slow flashcard I/O.  On Android there is nothing to wait for,
+   so one VBL per step gives the same 60 Hz-smooth fade in half the time.      */
+
 // Simple fade in from white
 void fadeFromWhite() {
     s16 i;
     for (i = 31; i > 0; i--) {
         PA_SetBrightness(0, i);
         PA_SetBrightness(1, i);
-        PA_WaitForVBL();
         PA_WaitForVBL();
     }
 }
@@ -46,7 +49,6 @@ void fadeInTop() {
     for (i = -31; i <= 0; i++) {
         PA_SetBrightness(1, i);
         PA_WaitForVBL();
-        PA_WaitForVBL();
     }
 }
 
@@ -55,7 +57,6 @@ void fadeInBottom() {
     s16 i;
     for (i = -31; i <= 0; i++) {
         PA_SetBrightness(0, i);
-        PA_WaitForVBL();
         PA_WaitForVBL();
     }
 }
@@ -66,7 +67,6 @@ void fadeIn() {
     for(i = -31; i <= 0; i++) {
         PA_SetBrightness(0, i);
         PA_SetBrightness(1, i);
-        PA_WaitForVBL();
         PA_WaitForVBL();
     }
     initSoundSystem();
@@ -79,7 +79,6 @@ void fadeOut() {
         PA_SetBrightness(0, i);
         PA_SetBrightness(1, i);
 //        PA_SetSoundVol((31+i) * 4);     // fade out global sound volume
-        PA_WaitForVBL();
         PA_WaitForVBL();
     }
     // stop sounds
@@ -114,11 +113,18 @@ int round32(int i) { return i - (i & 31); }
 // load options
 void loadOptions() {
     EFS_FILE* file = EFS_fopen(FILE_SETTINGS);
+
     EFS_fread(&multiple_builds, sizeof(bool), 1, file);
     EFS_fread(&build_menu_pos, sizeof(int), 1, file);
     EFS_fread(&interface_switch, sizeof(bool), 1, file);
     EFS_fread(&double_clic, sizeof(bool), 1, file);
     EFS_fclose(file);
+
+    // [Android port] build_menu_pos indexes the build-menu layout switch and
+    // is read straight from a file that EFS zero-fills on short reads; a
+    // truncated or corrupt settings file would otherwise leave it out of range.
+    if(build_menu_pos < 0 || build_menu_pos > 3)
+        build_menu_pos = 0;
 }
 
 // save options
