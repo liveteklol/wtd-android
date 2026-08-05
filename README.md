@@ -239,3 +239,26 @@ WTD_ROOT=build/fsroot WTD_OUT=build/frames WTD_SCRIPT=script.txt ./build/host/wt
 ```bash
 adb install -r build/wtd.apk
 ```
+
+### Adding custom maps
+
+No rebuild needed. Drop `.tdm` files into the app's external maps folder and
+restart the game:
+
+```
+Android/data/fr.noda.wtd.port/files/maps/
+```
+
+```bash
+adb push MyMap.tdm /sdcard/Android/data/fr.noda.wtd.port/files/maps/
+```
+
+The folder is created on first launch and is reachable over USB or from any
+file manager — no root and no permission prompt. Maps found there are imported
+on every start (prefixed `user_` internally so they can never collide with or
+overwrite a bundled map), and removing a file there removes it from the game on
+the next launch. The name shown in the map list comes from inside the `.tdm`
+file, not from its filename.
+
+To ship maps inside the APK instead, put them in `assets/maps/` and rebuild;
+both sources are listed together.

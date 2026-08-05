@@ -26,6 +26,7 @@
 #include <math.h>
 #include <time.h>
 #include <sys/stat.h>
+#include <dirent.h>
 #include <errno.h>
 
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO,  "WTD", __VA_ARGS__)
@@ -474,6 +475,92 @@ static void copy_asset(AAssetManager *am, const char *src, const char *dst,
     AAsset_close(a);
 }
 
+/* Custom maps: the game lists a single /maps directory, so user maps dropped
+   into the app's external files dir (visible over USB / in any file manager,
+   no permission and no root needed) are mirrored into it on every launch.
+   They are prefixed so they stay distinguishable from the bundled ones and
+   can be dropped again when the user deletes them outside.                 */
+#define USER_MAP_PREFIX "user_"
+
+static int has_tdm_ext(const char *name)
+{
+    size_t n = strlen(name);
+    return n > 4 && strcasecmp(name + n - 4, ".tdm") == 0;
+}
+
+static void copy_file(const char *src, const char *dst)
+{
+    struct stat ss, ds;
+    if (stat(src, &ss) != 0) return;
+    /* skip when an identical copy is already there */
+    if (stat(dst, &ds) == 0 && ds.st_size == ss.st_size &&
+        ds.st_mtime >= ss.st_mtime)
+        return;
+
+    FILE *in = fopen(src, "rb");
+    if (!in) return;
+    FILE *out = fopen(dst, "wb");
+    if (out) {
+        char buf[16384];
+        size_t n;
+        while ((n = fread(buf, 1, sizeof(buf), in)) > 0)
+            fwrite(buf, 1, n, out);
+        fclose(out);
+    }
+    fclose(in);
+}
+
+static void sync_user_maps(const char *root)
+{
+    const char *ext = g_app->activity->externalDataPath;
+    char udir[1024], ipath[1024];
+
+    if (!ext || !*ext) return;                 /* external storage unavailable */
+
+    /* create <external>/maps so the user has an obvious place to drop files */
+    snprintf(udir, sizeof(udir), "%s", ext);
+    mkdir(udir, 0755);
+    snprintf(udir, sizeof(udir), "%s/maps", ext);
+    if (mkdir(udir, 0755) != 0 && errno != EEXIST) return;
+
+    /* drop previously imported maps that are gone from the external dir */
+    snprintf(ipath, sizeof(ipath), "%s/maps", root);
+    DIR *id = opendir(ipath);
+    if (id) {
+        struct dirent *e;
+        while ((e = readdir(id))) {
+            if (strncmp(e->d_name, USER_MAP_PREFIX, strlen(USER_MAP_PREFIX)) != 0)
+                continue;
+            char probe[1024], victim[1024];
+            snprintf(probe, sizeof(probe), "%s/%s", udir,
+                     e->d_name + strlen(USER_MAP_PREFIX));
+            struct stat st;
+            if (stat(probe, &st) != 0) {
+                snprintf(victim, sizeof(victim), "%s/%s", ipath, e->d_name);
+                remove(victim);
+                LOGI("removed user map %s", e->d_name);
+            }
+        }
+        closedir(id);
+    }
+
+    /* import everything that looks like a map */
+    DIR *ud = opendir(udir);
+    if (!ud) return;
+    struct dirent *e;
+    int n = 0;
+    while ((e = readdir(ud))) {
+        if (!has_tdm_ext(e->d_name)) continue;
+        char s[1024], d[1024];
+        snprintf(s, sizeof(s), "%s/%s", udir, e->d_name);
+        snprintf(d, sizeof(d), "%s/" USER_MAP_PREFIX "%s", ipath, e->d_name);
+        copy_file(s, d);
+        n++;
+    }
+    closedir(ud);
+    if (n) LOGI("%d user map(s) in %s", n, udir);
+}
+
 static void extract_assets(void)
 {
     AAssetManager *am = g_app->activity->assetManager;
@@ -504,6 +591,9 @@ static void extract_assets(void)
         }
         AAssetDir_close(dir);
     }
+
+    /* after the bundled maps, so user maps are never clobbered by them */
+    sync_user_maps(root);
 }
 
 /* ------------------------------------------------------------------ */
