@@ -149,6 +149,19 @@ int build_sel_x1, build_sel_x2, build_sel_y1, build_sel_y2;     // build button 
 int cancel_sel_x1, cancel_sel_x2;           // cancel button selection rectangles
 int dbl_click_menu_x1, dbl_click_menu_x2;   // build menu zone inhibition for double click build mode
 
+// [Android port] on-screen game-speed button (top-left of the map view,
+// aligned with the Build/Cancel row): cycles 1x -> 2x -> 4x.
+// It reuses the original Build/Cancel artwork (same 64x16 frame and
+// build_menu_Pal palette, see gfx/speed_menu.c), so it matches the build menu
+// exactly; only the label glyphs differ.  Frames: 0=1x 1=2x 2=4x normal,
+// 3..5 the same pressed.
+#define MENUBTN_X1 0
+#define MENUBTN_Y1 0
+#define MENUBTN_X2 63
+#define MENUBTN_Y2 15
+#define SPEEDBTN_PRESS_FRAMES 8
+static u8 speedbtn_timer;       // frames left showing the pressed artwork
+
 // [Android port] recompute the build-menu anchoring from the current
 // viewport size (the viewport can change every frame with pinch zoom)
 static void computeBuildMenuLayout(void) {
@@ -518,6 +531,10 @@ void initEngine(map* map) {
     PA_CreateSprite(0, BUILD_MENU_ID+1, (void*)build_menu_Sprite, OBJ_SIZE_64X32, 1, BUILD_MENU_PAL_ID, 128+64, -32);
     PA_SetSpriteAnim(0, BUILD_MENU_ID+1, 1);
 
+    // [Android port] game-speed button, same artwork/palette as the build menu
+    PA_CreateSprite(0, SPEED_MENU_ID, (void*)speed_menu_Sprite, OBJ_SIZE_64X32, 1, BUILD_MENU_PAL_ID, MENUBTN_X1, MENUBTN_Y1);
+    speedbtn_timer = 0;
+
     // Create dialog button sprites
     PA_LoadSpritePal(0, SELECTED_PAL_ID, (void*)ingame_menu_selected_Pal);
     PA_CreateSprite(0, SELECTED_ID, (void*)ingame_menu_selected_Sprite, OBJ_SIZE_64X32, 1, SELECTED_PAL_ID, -32, -32);
@@ -573,31 +590,16 @@ bool startEngine() {
 }
 
 // Almost everything of the game engine...
-// [Android port] on-screen game-speed button (top-left of the map view,
-// aligned with the Build/Cancel row): cycles 1x -> 2x -> 4x
-#define MENUBTN_X1 4
-#define MENUBTN_Y1 3
-#define MENUBTN_X2 68
-#define MENUBTN_Y2 21
 static void drawMenuButton(void) {
-    int i, j;
-    PA_SetBgPalCol(0, 240, PA_RGB(2, 2, 8));      // dark blue fill
-    PA_SetBgPalCol(0, 241, PA_RGB(14, 14, 18));   // border
-    PA_SetBgPalCol(0, 242, PA_RGB(31, 26, 8));    // gold text
-    for(j=MENUBTN_Y1; j<=MENUBTN_Y2; j++)
-        for(i=MENUBTN_X1; i<MENUBTN_X2; i+=2)
-            PA_PutDouble8bitPixels(0, i, j, 240, 240);
-    for(i=MENUBTN_X1; i<=MENUBTN_X2; i++) {
-        PA_Put8bitPixel(0, i, MENUBTN_Y1, 241);
-        PA_Put8bitPixel(0, i, MENUBTN_Y2, 241);
+    u8 frame = (shim_game_speed == 1) ? 0 : (shim_game_speed == 2) ? 1 : 2;
+    if(speedbtn_timer > 0) {
+        speedbtn_timer--;
+        frame += 3;
     }
-    for(j=MENUBTN_Y1; j<=MENUBTN_Y2; j++) {
-        PA_Put8bitPixel(0, MENUBTN_X1, j, 241);
-        PA_Put8bitPixel(0, MENUBTN_X2, j, 241);
-    }
-    char spd[8];
-    sformat(spd, "%dx", shim_game_speed);
-    centerAlignSmartText(0, MENUBTN_X1, 8, MENUBTN_X2, 20, spd, 242, 1, 1);
+    PA_SetSpriteAnim(0, SPEED_MENU_ID, frame);
+    // sits in the Build/Cancel row; menu_y follows the viewport (see
+    // manageBuildMenu), the button itself stays anchored to the top-left
+    PA_SetSpriteXY(0, SPEED_MENU_ID, MENUBTN_X1, MENUBTN_Y1);
 }
 
 bool engineActions() {
@@ -2521,6 +2523,7 @@ void interfaceInteract() {
     // [Android port] bottom-screen game-speed button: 1x -> 2x -> 4x
     else if (!interface && Stylus.Newpress && PA_StylusInZone(MENUBTN_X1, MENUBTN_Y1, MENUBTN_X2, MENUBTN_Y2)) {
         shim_game_speed = (shim_game_speed == 1) ? 2 : (shim_game_speed == 2) ? 4 : 1;
+        speedbtn_timer = SPEEDBTN_PRESS_FRAMES;   // flash the pressed artwork
         playSound(MouseClick);
     }
 

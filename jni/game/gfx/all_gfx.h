@@ -15,6 +15,7 @@ extern const unsigned char selected_Sprite[1536] __attribute__ ((aligned (4))) ;
 extern const unsigned char selected_op_Sprite[1024] __attribute__ ((aligned (4))) ;  // Pal : selected_op_Pal
 extern const unsigned char hide_box_Sprite[3072] __attribute__ ((aligned (4))) ;  // Pal : hide_box_Pal
 extern const unsigned char build_menu_Sprite[8192] __attribute__ ((aligned (4))) ;  // Pal : build_menu_Pal
+extern const unsigned char speed_menu_Sprite[12288] __attribute__ ((aligned (4))) ;  // Pal : build_menu_Pal
 extern const unsigned char menu_continue_Sprite[768] __attribute__ ((aligned (4))) ;  // Pal : menu_continue_Pal
 extern const unsigned char ingame_menu_arrow_Sprite[256] __attribute__ ((aligned (4))) ;  // Pal : ingame_menu_arrow_Pal
 extern const unsigned char ingame_menu_selected_Sprite[4096] __attribute__ ((aligned (4))) ;  // Pal : ingame_menu_selected_Pal

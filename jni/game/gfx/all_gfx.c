@@ -16,6 +16,7 @@ extern "C" {
 #include "selected_op.c"
 #include "hide_box.c"
 #include "build_menu.c"
+#include "speed_menu.c"
 #include "menu_continue.c"
 #include "ingame_menu_arrow.c"
 #include "ingame_menu_selected.c"

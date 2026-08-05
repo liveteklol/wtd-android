@@ -107,6 +107,7 @@
 #define BASE_TOWERS_ID      123 // base sprite id for towers
 #define BASE_ATTACK_ID      83  // base sprite id for attacks
 #define BUILD_MENU_ID       124 // build menu sprite id (use 2 sprites)
+#define SPEED_MENU_ID       3   // [port] game-speed button sprite id
 #define SELECTED_ID         126 // selected flash sprite id (use 2 sprites)
 #define BUILD_OK_ID         2   // sprite id for build ok sprite
 #define BUILD_TOWER_ID      1   // sprite id for building temp tower
